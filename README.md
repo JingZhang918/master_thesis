@@ -1,4 +1,4 @@
-# master thesis
+# Stock Trading
 
 All the required files for my master thesis. 
 

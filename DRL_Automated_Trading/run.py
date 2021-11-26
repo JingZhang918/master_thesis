@@ -18,7 +18,7 @@ def env_creator(env_config):
     return StockTradingEnv(env_config)
 
 
-def run() ->:
+def run():
     saving_path = "./results14/"
     if not os.path.isdir(saving_path):
         os.mkdir(saving_path)

@@ -9,6 +9,8 @@ class StockTradingEnv(gym.Env):
         
         self.initial_balance = 1e6    
         self.data = env_config['data']
+        self.cash_balance = env_config['cash_balance']
+        self.current_own_share = env_config['current_own_share']
         self.columns = self.data.columns
         self.index = 0
         self.index_dates = self.data.index
@@ -139,7 +141,7 @@ class StockTradingEnv(gym.Env):
 
     def reset(self):
         self.index = 0
-        self.state = np.asarray([self.initial_balance] + [0] + self._get_market_data())
+        self.state = np.asarray([self.cash_balance] + [self.current_own_share] + self._get_market_data())
         return self.state
 
     def render(self, mode='detail'):
