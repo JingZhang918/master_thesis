@@ -19,10 +19,11 @@ def env_creator(env_config):
     return StockTradingEnv(env_config)
 
 def get_trading_records(ticker, df, saving_path=None):
+
     end = datetime.strptime(config.END, "%Y-%m-%d")
 
     if ticker in ["1COV.DE", "DHER.DE", "VNA.DE", "ENR.DE"]:
-        start = datetime.strptime(df.index[0], "%Y-%m-%d")
+        start = df.index[0]
         training_period = start + relativedelta(years=1)
     else:
         start = datetime.strptime(config.START, "%Y-%m-%d")
@@ -32,7 +33,9 @@ def get_trading_records(ticker, df, saving_path=None):
 
     cash_balance = config.INITIAL_BALANCE
     current_own_share = config.INITIAL_SHARE
-    while trading_period != end:
+    ray.init(ignore_reinit_error=True)
+
+    while trading_period <= end:
 
         print("============================================================================")
         print(training_period, trading_period)
@@ -41,7 +44,6 @@ def get_trading_records(ticker, df, saving_path=None):
         print(training_data.shape, trading_data.shape)
         print("============================================================================")
 
-        ray.init(ignore_reinit_error=True)
         register_env("StockTradingEnv", env_creator)
 
         # rap tune.ray inside
@@ -74,6 +76,7 @@ def get_trading_records(ticker, df, saving_path=None):
         agent = PPOTrainer(config=analysis.best_config, env=StockTradingEnv)
         agent.restore(analysis.best_checkpoint)
 
+        # print(trading_data.head(10))
         trade_entry = {}
         dates = trading_data.index
         done = False
@@ -108,7 +111,7 @@ def get_trading_records(ticker, df, saving_path=None):
             i += 1
             detailed_trading_results = detailed_trading_results.append(trade_entry, ignore_index=True)
 
-        ray.shutdown()
+
 
         cash_balance = obs[0]
         current_own_share = obs[1]
@@ -118,9 +121,10 @@ def get_trading_records(ticker, df, saving_path=None):
         if trading_period > end:
             trading_period = end
 
-    if saving_path is not None:
-        detailed_trading_results.to_excel(saving_path + ticker + ".xlsx")
 
+    detailed_trading_results.to_excel(saving_path + ticker + ".xlsx")
+
+    ray.shutdown()
     return detailed_trading_results
 
 

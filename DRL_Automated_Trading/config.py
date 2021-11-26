@@ -13,7 +13,7 @@ if not os.path.isdir(saving_path_comparison):
 
 START = "2011-11-01"
 END = "2021-11-01"
-WINDOW = 12
+WINDOW =12*1
 
 # START = "2015-11-01"
 # END = "2021-11-01"
@@ -25,9 +25,9 @@ SYMBOLS = ["ADS.DE",
            "BAYN.DE",
            "BMW.DE",
            "CON.DE",
-           "1COV.DE",
+           # "1COV.DE",
            "DAI.DE",
-           "DHER.DE",
+           # "DHER.DE",
            "DBK.DE",
            "DB1.DE",
            "DPW.DE",
@@ -48,7 +48,7 @@ SYMBOLS = ["ADS.DE",
            "SIE.DE",
            # "ENR.DE",
            "VOW3.DE",
-           "VNA.DE"
+           # "VNA.DE"
           ]
 
 

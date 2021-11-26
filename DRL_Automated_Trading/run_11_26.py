@@ -1,15 +1,13 @@
 import pandas as pd
 import yfinance as yf
 import config
-import warnings
-
+import os
 from get_data_11_26 import  get_data
-from trading import get_trading_records
+from trading_11_26 import get_trading_records
 
 def run():
-    warnings.filterwarnings('ignore')
     dax_trading_records = pd.DataFrame()
-    for ticker in ["ADS.DE","1COV.DE"]:
+    for ticker in ["ALV.DE","ADS.DE"]:
         print(ticker)
         # get all data
         df = get_data(ticker, config.START, config.END)
