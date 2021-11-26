@@ -18,7 +18,7 @@ import pandas as pd
 def env_creator(env_config):
     return StockTradingEnv(env_config)
 
-def get_trading_records(ticker, df, saving_path=None):
+def get_trading_records(ticker, df):
 
     end = datetime.strptime(config.END, "%Y-%m-%d")
 
@@ -96,7 +96,7 @@ def get_trading_records(ticker, df, saving_path=None):
         i += 1
         detailed_trading_results = detailed_trading_results.append(trade_entry, ignore_index=True)
 
-    detailed_trading_results.to_excel(saving_path + ticker + ".xlsx")
+    # detailed_trading_results.to_excel(saving_path + ticker + ".xlsx")
 
     ray.shutdown()
     return detailed_trading_results

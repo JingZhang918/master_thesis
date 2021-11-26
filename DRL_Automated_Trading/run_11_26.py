@@ -12,9 +12,9 @@ def run():
         # get all data
         df = get_data(ticker, config.START, config.END)
         # trade and
-        ticker_trading_records = get_trading_records(ticker, df, saving_path=config.saving_path_trading_records)
+        ticker_trading_records = get_trading_records(ticker, df)
         dax_trading_records = dax_trading_records.append(ticker_trading_records)
-
+    dax_trading_records.to_excel(config.saving_path_trading_records+"dax_trading_records.xlsx")
     #compare drl and etf
     # df_etf = yf.Ticker("EXS1.DE").history(start=config.start_date, end=config.end_date)
     # plot_comparison(dax_trading_records, df_etf)
