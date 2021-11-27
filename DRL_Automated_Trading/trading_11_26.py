@@ -35,7 +35,7 @@ def get_trading_records(ticker, df):
     # rap tune.ray inside
     analysis = tune.run(
         run_or_experiment=PPOTrainer
-        , stop={'timesteps_total': 1e1}
+        , stop={'timesteps_total': 1e4}
         , config={
             'env': "StockTradingEnv"
             , "env_config": { 'data': training_data }

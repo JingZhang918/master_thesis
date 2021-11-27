@@ -27,7 +27,7 @@ def get_trading_records(ticker, df, saving_path=None):
         training_period = start + relativedelta(years=1)
     else:
         start = datetime.strptime(config.START, "%Y-%m-%d")
-        training_period = start + relativedelta(years=5)
+        training_period = start + relativedelta(years=7)
 
     trading_period = training_period + relativedelta(months=config.WINDOW)
 
@@ -49,7 +49,7 @@ def get_trading_records(ticker, df, saving_path=None):
         # rap tune.ray inside
         analysis = tune.run(
             run_or_experiment=PPOTrainer
-            , stop={'timesteps_total': 1e1}
+            , stop={'timesteps_total': 1e4}
             , config={
                 'env': "StockTradingEnv"
                 , "env_config": { 'data': training_data, "cash_balance": config.INITIAL_BALANCE, "current_own_share": config.INITIAL_SHARE }
