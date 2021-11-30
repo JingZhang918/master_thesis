@@ -14,8 +14,8 @@ def run(train_model=True, show_comp=True, show_behav=False, file_name=None):
     if train_model:
         # train model and get trading results
         dax_trading_records = pd.DataFrame()
-        # for ticker in config.SYMBOLS:
-        for ticker in ["LIN.DE"]:
+        for ticker in config.SYMBOLS:
+        # for ticker in ["LIN.DE"]:
             print(ticker)
             # get all data
             df = get_data(ticker, config.START, config.END)
