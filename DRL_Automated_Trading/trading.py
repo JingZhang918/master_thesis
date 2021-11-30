@@ -23,7 +23,7 @@ def get_trading_records(ticker, df):
     end = datetime.strptime(config.END, "%Y-%m-%d")
 
     # IPO later than config.START
-    if ticker in ["1COV.DE", "DHER.DE", "VNA.DE", "ENR.DE"]:
+    if ticker in ["1COV.DE", "DHER.DE", "VNA.DE", "ENR.DE", "LIN.DE"]:
         training_period_start = df.index[0]
         #minimum training period 1 year
         training_period_end = training_period_start + relativedelta(years=1)
@@ -44,9 +44,6 @@ def get_trading_records(ticker, df):
         columns=["ticker", "date", "signal", "cash_balance", "share_holding", "asset"
             , "transaction_price", "transaction_cost", "trading_outlay", "reward"])
 
-    print("============================================================================")
-    print(training_period_start, training_period_end, trading_period, end)
-    
     while (trading_period <= end)|((training_period_end < end)&(trading_period > end)):
 
         print("============================================================================")
@@ -56,17 +53,17 @@ def get_trading_records(ticker, df):
         print(training_data.shape, trading_data.shape)
         print("============================================================================")
 
+        # if the trading period is only 1 day, continue
+        if trading_data.shape[0] == 1:
+            break
+
         ray.init(ignore_reinit_error=True)
         register_env("StockTradingEnv", env_creator)
 
-        print("============================================================================")
-        print(trading_outlay)
-        print("============================================================================")
-        
         # rap tune.ray inside
         analysis = tune.run(
             run_or_experiment=PPOTrainer
-            , stop={'timesteps_total': 5e3}
+            , stop={'timesteps_total': 1e4}
             , config={
                 'env': "StockTradingEnv"
                 , "env_config": { 'data': training_data, "cash_balance": config.INITIAL_BALANCE
@@ -75,7 +72,7 @@ def get_trading_records(ticker, df):
                 #             ,'lr': tune.qloguniform(1e-1, 1, 5e-5)
                 #             ,'gamma': tune.uniform(0.97, 1)
                 #             ,'clip_param' : tune.uniform(0.2, 0.4)
-                , 'vf_clip_param': 1e6
+                , 'vf_clip_param': 1e5
             }
             , search_alg=ConcurrencyLimiter(
                 BayesOptSearch(random_search_steps=4, metric="episode_reward_mean", mode="max"),
@@ -94,9 +91,6 @@ def get_trading_records(ticker, df):
         trade_entry = {}
         dates = trading_data.index
         done = False
-        print("============================================================================")
-        print(trading_outlay)
-        print("============================================================================")
         # important records from the last day of the last trading period
         env_config = {'data': trading_data, "cash_balance": cash_balance, "current_own_share": current_own_share
                      ,"trading_outlay": trading_outlay}
@@ -149,12 +143,6 @@ def get_trading_records(ticker, df):
         # roll trading period forward 1 window
         trading_period = training_period_end + relativedelta(months=config.WINDOW)
         
-#         # ceiling
-#         if trading_period > end:
-#             trading_period = end
-        print("============================================================================")
-        print(training_period_start, training_period_end, trading_period, end)
-        print("============================================================================")
 
     return trading_results
 

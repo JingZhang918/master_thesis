@@ -7,6 +7,10 @@ def get_data(TICKER, start, end):
 
     df = yf.Ticker(TICKER).history(start=start, end=end)[['Open','High','Low','Close', 'Volume']]
 
+    # special treatment, it has a suspicious data before "2018-10-29"
+    if TICKER == "LIN.DE":
+      df = df[df.index >= "2018-10-29"]
+
     # MACD
     df.ta.macd(close='close', fast=12, slow=26, append=True)
     # MACD crossing above the signal line – Buy
