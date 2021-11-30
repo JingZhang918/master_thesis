@@ -5,6 +5,7 @@ import numpy as np
 
 def get_revised_yearly_return(df_drl) -> pd.DataFrame:
     # to deal companies with incomplete yearly data
+    df_drl = df_drl.set_index(["date"])
     temp1 = \
         df_drl.groupby(["ticker", df_drl.index.year]).apply(lambda x: pd.Series({
             "count": x.asset.count(),
@@ -18,13 +19,18 @@ def get_revised_yearly_return(df_drl) -> pd.DataFrame:
     temp1["revised_first"] = temp1["last"].div(temp1["revised_return"])
 
     temp2 = temp1.groupby(level=["date"])['revised_first', 'last'].apply(np.sum)
-    yearly_return = temp2["last"].div(temp2["revised_first"]) - 1
-    return yearly_return
+    yearly_asset_return = temp2["last"].div(temp2["revised_first"]) - 1
+    yearly_reward_return = (df_drl.groupby([df_drl.index.year]).reward.apply(np.sum)).div(temp2["revised_first"])
+    
+    return yearly_asset_return, yearly_reward_return
 
-    # pass
+
+
+
 
 def get_revised_monthly_return(df_drl) -> pd.DataFrame:
     # to deal companies with incomplete yearly data
+    df_drl = df_drl.set_index(["date"])
     temp1 = \
         df_drl.groupby(["ticker", df_drl.index.year, df_drl.index.month]).apply(lambda x: pd.Series({
             "count": x.asset.count(),
@@ -39,6 +45,9 @@ def get_revised_monthly_return(df_drl) -> pd.DataFrame:
     temp1["revised_return"] = (temp1["last"].div(temp1["first"])) ** temp1["factor"]
     temp1["revised_first"] = temp1["last"].div(temp1["revised_return"])
     temp2 = temp1.groupby(level=["year", "month"])['revised_first', 'last'].apply(np.sum)
-    monthly_return = temp2["last"].div(temp2["revised_first"]) - 1
+    
+    monthly_asset_return = temp2["last"].div(temp2["revised_first"]) - 1
+    
+    monthly_reward_return = (df_drl.groupby([df_drl.index.year, df_drl.index.month]).reward.apply(np.sum)).div(temp2["revised_first"])
 
-    return monthly_return
+    return monthly_asset_return, monthly_reward_return

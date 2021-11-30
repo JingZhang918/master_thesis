@@ -22,28 +22,35 @@ def get_trading_records(ticker, df):
 
     end = datetime.strptime(config.END, "%Y-%m-%d")
 
+    # IPO later than config.START
     if ticker in ["1COV.DE", "DHER.DE", "VNA.DE", "ENR.DE"]:
         training_period_start = df.index[0]
         #minimum training period 1 year
         training_period_end = training_period_start + relativedelta(years=1)
+        if training_period_end < datetime.strptime(config.END, "%Y-%m-%d") - relativedelta(years=5):
+            training_period_end = datetime.strptime(config.END, "%Y-%m-%d") - relativedelta(years=5)
     else:
         training_period_start = datetime.strptime(config.START, "%Y-%m-%d")
-        #maxium training period 7 years (long data incurs technical problems)
-        training_period_end = training_period_start + relativedelta(years=7)
+        #maxium training period 5 years (long data incurs technical problems)
+        training_period_end = training_period_start + relativedelta(years=config.TRAINING_YEARS)
 
     trading_period = training_period_end + relativedelta(months=config.WINDOW)
 
     cash_balance = config.INITIAL_BALANCE
     current_own_share = config.INITIAL_SHARE
+    trading_outlay = []
 
     trading_results = pd.DataFrame(
         columns=["ticker", "date", "signal", "cash_balance", "share_holding", "asset"
             , "transaction_price", "transaction_cost", "trading_outlay", "reward"])
 
-    while trading_period <= end:
+    print("============================================================================")
+    print(training_period_start, training_period_end, trading_period, end)
+    
+    while (trading_period <= end)|((training_period_end < end)&(trading_period > end)):
 
         print("============================================================================")
-        print(training_period_start, training_period_end, trading_period)
+        print(training_period_start, training_period_end, trading_period, end)
         training_data = df[(df.index >= training_period_start) & (df.index < training_period_end)]
         trading_data = df[(df.index >= training_period_end) & (df.index < trading_period)]
         print(training_data.shape, trading_data.shape)
@@ -52,18 +59,23 @@ def get_trading_records(ticker, df):
         ray.init(ignore_reinit_error=True)
         register_env("StockTradingEnv", env_creator)
 
+        print("============================================================================")
+        print(trading_outlay)
+        print("============================================================================")
+        
         # rap tune.ray inside
         analysis = tune.run(
             run_or_experiment=PPOTrainer
-            , stop={'timesteps_total': 1e4}
+            , stop={'timesteps_total': 5e3}
             , config={
                 'env': "StockTradingEnv"
-                , "env_config": { 'data': training_data, "cash_balance": config.INITIAL_BALANCE, "current_own_share": config.INITIAL_SHARE }
+                , "env_config": { 'data': training_data, "cash_balance": config.INITIAL_BALANCE
+                                 , "current_own_share": config.INITIAL_SHARE, "trading_outlay": [] }
                 , "seed": 0
                 #             ,'lr': tune.qloguniform(1e-1, 1, 5e-5)
                 #             ,'gamma': tune.uniform(0.97, 1)
                 #             ,'clip_param' : tune.uniform(0.2, 0.4)
-                , 'vf_clip_param': 1e4
+                , 'vf_clip_param': 1e6
             }
             , search_alg=ConcurrencyLimiter(
                 BayesOptSearch(random_search_steps=4, metric="episode_reward_mean", mode="max"),
@@ -76,26 +88,32 @@ def get_trading_records(ticker, df):
             , verbose=0
         )
 
-
         agent = PPOTrainer(config=analysis.best_config, env=StockTradingEnv)
         agent.restore(analysis.best_checkpoint)
 
         trade_entry = {}
         dates = trading_data.index
         done = False
-        env_config = {'data': trading_data, "cash_balance": cash_balance, "current_own_share": current_own_share}
+        print("============================================================================")
+        print(trading_outlay)
+        print("============================================================================")
+        # important records from the last day of the last trading period
+        env_config = {'data': trading_data, "cash_balance": cash_balance, "current_own_share": current_own_share
+                     ,"trading_outlay": trading_outlay}
         env_trading = StockTradingEnv(env_config)
         obs = env_trading.reset()
 
         # first day
         trade_entry["ticker"] = ticker
         trade_entry["date"] = dates[0]
-        trade_entry["cash_balance"] = trade_entry["asset"] = obs[0]
+        trade_entry["cash_balance"] = obs[0]
         trade_entry["share_holding"] = obs[1]
+        trade_entry["asset"] = obs[0] + obs[1] * obs[4]
         trade_entry["transaction_price"] = np.average([obs[3], obs[4]])
-        trade_entry["transaction_cost"] = trade_entry["trading_outlay"] = trade_entry["reward"] = trade_entry["signal"] = 0
+        trade_entry["trading_outlay"] = np.sum(trading_outlay)
+        trade_entry["transaction_cost"] = trade_entry["reward"] = trade_entry["signal"] = 0
         trading_results = trading_results.append(trade_entry, ignore_index=True)
-
+#         print(trading_results)
         i = 1
         while not done:
             trade_entry["ticker"] = ticker
@@ -104,27 +122,39 @@ def get_trading_records(ticker, df):
             trade_entry["signal"] = action - 1
             obs, reward, done, info = env_trading.step(action)
 
-            trade_entry["cash_balance"] = obs[0]
-            trade_entry["share_holding"] = obs[1]
-            trade_entry["asset"] = obs[0] + obs[1] * np.average([obs[3], obs[4]])
-            trade_entry["transaction_price"] = np.average([obs[3], obs[4]])
+            trade_entry["cash_balance"] = info["cash_balance"]
+            trade_entry["share_holding"] = info["share_holding"]
+            trade_entry["asset"] = info["asset"]
+            trade_entry["transaction_price"] = info["transaction_price"]
             trade_entry["transaction_cost"] = info["transaction_cost"]
-            trade_entry["trading_outlay"] = info["trading_outlay"]
+            trade_entry["trading_outlay"] = np.sum(info["trading_outlay"])
             trade_entry["reward"] = reward
             i += 1
+#             print(trade_entry)
             trading_results = trading_results.append(trade_entry, ignore_index=True)
+#             print(trade_entry)
+#             print(trading_results.tail(5))
 
         ray.shutdown()
 
-        cash_balance = obs[0]
-        current_own_share = obs[1]
+        cash_balance = info["cash_balance"]
+        current_own_share = info["share_holding"]
+        trading_outlay = info["trading_outlay"]
 
+        # roll training period forward 1 window
         training_period_end += relativedelta(months=config.WINDOW)
-        if (training_period_end-training_period_start).days > 2557:
+        # if trading data is less than training years, accumulate training data
+        if (training_period_end-training_period_start).days > 365*config.TRAINING_YEARS:
             training_period_start += relativedelta(months=config.WINDOW)
-        if training_period_end > end:
-            training_period_end = end
+        # roll trading period forward 1 window
         trading_period = training_period_end + relativedelta(months=config.WINDOW)
+        
+#         # ceiling
+#         if trading_period > end:
+#             trading_period = end
+        print("============================================================================")
+        print(training_period_start, training_period_end, trading_period, end)
+        print("============================================================================")
 
     return trading_results
 

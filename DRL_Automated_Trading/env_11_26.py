@@ -11,6 +11,8 @@ class StockTradingEnv(gym.Env):
         self.data = env_config['data']
         self.cash_balance = env_config['cash_balance']
         self.current_own_share = env_config['current_own_share']
+        self.trade_cost = env_config["trading_outlay"]
+        
         self.columns = self.data.columns
         self.index = 0
         self.index_dates = self.data.index
@@ -29,9 +31,7 @@ class StockTradingEnv(gym.Env):
         self.action_record = []
         self.reward_record = []
         self.asset_record = []
-        self.trade_cost = list()
-
-
+        
     def step(self, action):
         action = action - 1
 
@@ -86,11 +86,11 @@ class StockTradingEnv(gym.Env):
         self.reward_record.append(reward)
         self.asset_record.append(asset)
 
-        info = {"trading_outlay": np.sum(self.trade_cost), "transaction_cost": transaction_cost
+        info = {"cash_balance": current_balance, "share_holding": current_own_share, "asset": asset, 
+                "transaction_price": transaction_price, "trading_outlay": self.trade_cost, "transaction_cost": transaction_cost
                ,"total_reward": np.sum(self.reward_record), "total_transaction_cost": np.sum(self.transaction_cost_record)}
                 
         return self.state, reward, done, info
-
 
     def _get_market_data(self) -> list:
         '''
