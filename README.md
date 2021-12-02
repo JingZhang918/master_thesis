@@ -24,7 +24,7 @@
 
 <!-- ABOUT THE PROJECT -->
 ## About this repository
-This repository contains all required files for chapter 7 of my master thesis. It contains two parts: [Technical_Indicator_analysis](https://github.com/JingZhang918/master_thesis/tree/main/Technical_Indicator_Analysis) 
+This repository contains all required files for chapter 7 of my [master thesis](https://jingzhang.tech/wp-content/uploads/2021/12/thesis_2021_11_30.pdf). It contains two parts: [Technical_Indicator_analysis](https://github.com/JingZhang918/master_thesis/tree/main/Technical_Indicator_Analysis) 
 and [DRL_Automated_Trading](https://github.com/JingZhang918/master_thesis/tree/main/DRL_Automated_Trading) 
 
 <!-- 
